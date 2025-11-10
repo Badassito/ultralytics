@@ -23,6 +23,8 @@ from ultralytics.utils.torch_utils import TORCHVISION_0_10, TORCHVISION_0_11, TO
 
 DEFAULT_MEAN = (0.0, 0.0, 0.0)
 DEFAULT_STD = (1.0, 1.0, 1.0)
+DEFAULT_MEAN_GRAY = (0.0,)
+DEFAULT_STD_GRAY = (1.0,)
 
 
 class BaseTransform:
@@ -2546,8 +2548,8 @@ def v8_transforms(dataset, imgsz: int, hyp: IterableSimpleNamespace, stretch: bo
 # Classification augmentations -----------------------------------------------------------------------------------------
 def classify_transforms(
     size: tuple[int, int] | int = 224,
-    mean: tuple[float, float, float] = DEFAULT_MEAN,
-    std: tuple[float, float, float] = DEFAULT_STD,
+    mean: tuple[float, ...] = DEFAULT_MEAN,
+    std: tuple[float, ...] = DEFAULT_STD,
     interpolation: str = "BILINEAR",
     crop_fraction: float | None = None,
 ):
@@ -2560,8 +2562,10 @@ def classify_transforms(
     Args:
         size (int | tuple): The target size for the transformed image. If an int, it defines the shortest edge. If a
             tuple, it defines (height, width).
-        mean (tuple[float, float, float]): Mean values for each RGB channel used in normalization.
-        std (tuple[float, float, float]): Standard deviation values for each RGB channel used in normalization.
+        mean (tuple[float, ...]): Mean values for each channel used in normalization. Use 1 value for grayscale,
+            3 values for RGB.
+        std (tuple[float, ...]): Standard deviation values for each channel used in normalization. Use 1 value for
+            grayscale, 3 values for RGB.
         interpolation (str): Interpolation method of either 'NEAREST', 'BILINEAR' or 'BICUBIC'.
         crop_fraction (float): Deprecated, will be removed in a future version.
 
@@ -2596,8 +2600,8 @@ def classify_transforms(
 # Classification training augmentations --------------------------------------------------------------------------------
 def classify_augmentations(
     size: int = 224,
-    mean: tuple[float, float, float] = DEFAULT_MEAN,
-    std: tuple[float, float, float] = DEFAULT_STD,
+    mean: tuple[float, ...] = DEFAULT_MEAN,
+    std: tuple[float, ...] = DEFAULT_STD,
     scale: tuple[float, float] | None = None,
     ratio: tuple[float, float] | None = None,
     hflip: float = 0.5,
@@ -2617,8 +2621,10 @@ def classify_augmentations(
 
     Args:
         size (int): Target size for the image after transformations.
-        mean (tuple[float, float, float]): Mean values for each RGB channel used in normalization.
-        std (tuple[float, float, float]): Standard deviation values for each RGB channel used in normalization.
+        mean (tuple[float, ...]): Mean values for each channel used in normalization. Use 1 value for grayscale,
+            3 values for RGB.
+        std (tuple[float, ...]): Standard deviation values for each channel used in normalization. Use 1 value for
+            grayscale, 3 values for RGB.
         scale (tuple[float, float] | None): Range of size of the origin size cropped.
         ratio (tuple[float, float] | None): Range of aspect ratio of the origin aspect ratio cropped.
         hflip (float): Probability of horizontal flip.

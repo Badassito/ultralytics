@@ -22,6 +22,10 @@ from ultralytics.utils.torch_utils import TORCHVISION_0_18
 
 from .augment import (
     Compose,
+    DEFAULT_MEAN,
+    DEFAULT_MEAN_GRAY,
+    DEFAULT_STD,
+    DEFAULT_STD_GRAY,
     Format,
     LetterBox,
     RandomLoadText,
@@ -744,9 +748,15 @@ class ClassificationDataset:
         self.samples = self.verify_images()  # filter out bad images
         self.samples = [[*list(x), Path(x[0]).with_suffix(".npy"), None] for x in self.samples]  # file, index, npy, im
         scale = (1.0 - args.scale, 1.0)  # (0.08, 1.0)
+        # Determine appropriate mean/std based on number of channels
+        channels = getattr(args, "channels", 3)
+        mean = DEFAULT_MEAN_GRAY if channels == 1 else DEFAULT_MEAN
+        std = DEFAULT_STD_GRAY if channels == 1 else DEFAULT_STD
         self.torch_transforms = (
             classify_augmentations(
                 size=args.imgsz,
+                mean=mean,
+                std=std,
                 scale=scale,
                 hflip=args.fliplr,
                 vflip=args.flipud,
@@ -757,7 +767,7 @@ class ClassificationDataset:
                 hsv_v=args.hsv_v,
             )
             if augment
-            else classify_transforms(size=args.imgsz)
+            else classify_transforms(size=args.imgsz, mean=mean, std=std)
         )
 
     def __getitem__(self, i: int) -> dict:
@@ -780,7 +790,12 @@ class ClassificationDataset:
         else:  # read image
             im = cv2.imread(f)  # BGR
         # Convert NumPy array to PIL image
-        im = Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))
+        if len(im.shape) == 2 or im.shape[2] == 1:
+            # Single-channel image (grayscale)
+            im = Image.fromarray(im if len(im.shape) == 2 else im[:, :, 0], mode="L")
+        else:
+            # Multi-channel image (RGB)
+            im = Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))
         sample = self.torch_transforms(im)
         return {"img": sample, "cls": j}
 
