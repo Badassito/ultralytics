@@ -4,7 +4,7 @@ import cv2
 import torch
 from PIL import Image
 
-from ultralytics.data.augment import classify_transforms
+from ultralytics.data.augment import DEFAULT_MEAN, DEFAULT_MEAN_GRAY, DEFAULT_STD, DEFAULT_STD_GRAY, classify_transforms
 from ultralytics.engine.predictor import BasePredictor
 from ultralytics.engine.results import Results
 from ultralytics.utils import DEFAULT_CFG, ops
@@ -56,15 +56,25 @@ class ClassificationPredictor(BasePredictor):
             if hasattr(self.model.model, "transforms") and hasattr(self.model.model.transforms.transforms[0], "size")
             else False
         )
+        # Determine appropriate mean/std based on model channels
+        channels = getattr(self.model.model, "yaml", {}).get("ch", 3) if hasattr(self.model, "model") else 3
+        mean = DEFAULT_MEAN_GRAY if channels == 1 else DEFAULT_MEAN
+        std = DEFAULT_STD_GRAY if channels == 1 else DEFAULT_STD
         self.transforms = (
-            classify_transforms(self.imgsz) if updated or not self.model.pt else self.model.model.transforms
+            classify_transforms(self.imgsz, mean=mean, std=std) if updated or not self.model.pt else self.model.model.transforms
         )
 
     def preprocess(self, img):
         """Convert input images to model-compatible tensor format with appropriate normalization."""
         if not isinstance(img, torch.Tensor):
             img = torch.stack(
-                [self.transforms(Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))) for im in img], dim=0
+                [
+                    self.transforms(
+                        Image.fromarray(im if len(im.shape) == 2 or im.shape[2] == 1 else cv2.cvtColor(im, cv2.COLOR_BGR2RGB), mode='L' if len(im.shape) == 2 or im.shape[2] == 1 else None)
+                    )
+                    for im in img
+                ],
+                dim=0,
             )
         img = (img if isinstance(img, torch.Tensor) else torch.from_numpy(img)).to(self.model.device)
         return img.half() if self.model.fp16 else img.float()  # Convert uint8 to fp16/32
