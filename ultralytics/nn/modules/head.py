@@ -425,7 +425,9 @@ class Classify(nn.Module):
         self.pool = nn.AdaptiveAvgPool2d(1)  # to x(b,c_,1,1)
         self.drop = nn.Dropout(p=0.0, inplace=True)
         self.linear = nn.Linear(c_, c2)  # to x(b,c2)
-        self.linear.bias.requires_grad = False  # make bias untrainable
+        # Make all biases untrainable
+        self.conv.bn.bias.requires_grad = False  # BatchNorm bias
+        self.linear.bias.requires_grad = False  # Linear bias
 
     def forward(self, x: list[torch.Tensor] | torch.Tensor) -> torch.Tensor | tuple:
         """Perform forward pass of the YOLO model on input image data."""
