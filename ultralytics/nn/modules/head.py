@@ -404,11 +404,25 @@ class Classify(nn.Module):
         >>> classify = Classify(c1=1024, c2=1000)
         >>> x = torch.randn(1, 1024, 20, 20)
         >>> output = classify(x)
+
+        Create a classification head with frozen bias
+        >>> classify = Classify(c1=1024, c2=1000, freeze_bias=True)
+        >>> # Only weights will be trained, bias remains fixed
     """
 
     export = False  # export mode
 
-    def __init__(self, c1: int, c2: int, k: int = 1, s: int = 1, p: int | None = None, g: int = 1):
+    def __init__(
+        self,
+        c1: int,
+        c2: int,
+        k: int = 1,
+        s: int = 1,
+        p: int | None = None,
+        g: int = 1,
+        freeze_weight: bool = False,
+        freeze_bias: bool = False,
+    ):
         """Initialize YOLO classification head to transform input tensor from (b,c1,20,20) to (b,c2) shape.
 
         Args:
@@ -418,6 +432,8 @@ class Classify(nn.Module):
             s (int, optional): Stride.
             p (int, optional): Padding.
             g (int, optional): Groups.
+            freeze_weight (bool, optional): If True, freeze the linear layer weights (not trainable).
+            freeze_bias (bool, optional): If True, freeze the linear layer bias (not trainable).
         """
         super().__init__()
         c_ = 1280  # efficientnet_b0 size
@@ -425,6 +441,12 @@ class Classify(nn.Module):
         self.pool = nn.AdaptiveAvgPool2d(1)  # to x(b,c_,1,1)
         self.drop = nn.Dropout(p=0.0, inplace=True)
         self.linear = nn.Linear(c_, c2)  # to x(b,c2)
+
+        # Freeze weights and/or bias if requested
+        if freeze_weight:
+            self.linear.weight.requires_grad = False
+        if freeze_bias:
+            self.linear.bias.requires_grad = False
 
     def forward(self, x: list[torch.Tensor] | torch.Tensor) -> torch.Tensor | tuple:
         """Perform forward pass of the YOLO model on input image data."""
