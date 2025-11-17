@@ -660,6 +660,7 @@ class ClassificationModel(BaseModel):
         if isinstance(m, Classify):  # YOLO Classify() head
             if m.linear.out_features != nc:
                 m.linear = torch.nn.Linear(m.linear.in_features, nc)
+                m.linear.bias.requires_grad = False  # make bias untrainable
         elif isinstance(m, torch.nn.Linear):  # ResNet, EfficientNet
             if m.out_features != nc:
                 setattr(model, name, torch.nn.Linear(m.in_features, nc))
